@@ -12,7 +12,8 @@ obj-$(CONFIG_DECK_LIGHTHOUSE)    += lighthouse.o
 obj-$(CONFIG_DECK_LOCO)          += locodeck.o
 obj-$(CONFIG_DECK_LOCO)          += lpsTdoa2Tag.o
 obj-$(CONFIG_DECK_LOCO)          += lpsTdoa3Tag.o
-obj-$(CONFIG_DECK_LOCO)          += lpsTwrTag.o
+# To be fixed: skip lpsTwrTag.o in app layer
+# obj-$(CONFIG_DECK_LOCO)          += lpsTwrTag.o
 obj-$(CONFIG_DECK_MULTIRANGER)   += multiranger.o
 obj-$(CONFIG_DECK_OA)            += oa.o
 obj-$(CONFIG_DECK_USD)           += usddeck.o
