@@ -15,7 +15,7 @@ typedef struct {
   float gyroZ;
   float height;
   bool flyStatus;
-} __attribute__((packed)) swarmTwrTagReportPayload_t;
+} swarmTwrTagReportPayload_t;
 
 bool getSwarmTwrInfo(int agentId, uint16_t* distance, float* velX, float* velY, float* gyroZ, float* height);
 bool updateFlyStatus(int agentId, bool flyStatus);

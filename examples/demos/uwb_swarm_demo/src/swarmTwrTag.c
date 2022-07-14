@@ -31,7 +31,8 @@
 #include "physicalConstants.h"
 #include "task.h"
 #include "configblock.h"
-// #include "estimator_kalman.h"
+#include "estimator_kalman.h"
+#include "cf_math.h"
 #include "lpsTwrTag.h"
 #include "swarmTwrTag.h"
 
@@ -74,6 +75,25 @@ typedef struct {
   uint8_t pointer;
 } median_data_t;
 static median_data_t median_data[NUM_UWB];
+
+static logVarId_t idPX; // bug: read from log has influence on distance4 logging
+static logVarId_t idPY;
+static logVarId_t idPZ;
+static logVarId_t idGZ;
+static logVarId_t idZ;
+static void getSwarmInputsFromKalman(float* velX, float* velY, float* gyroZ, float* height){
+  // rotation matrix
+  float R[3][3];
+  estimatorKalmanGetEstimatedRot((float*)R);
+  float PX = logGetUint(idPX);
+  float PY = logGetUint(idPY);
+  float PZ = logGetUint(idPZ);
+  float GZ = logGetUint(idGZ);
+  *height = logGetUint(idZ);
+  *velX = R[0][0] * PX + R[0][1] * PY + R[0][2] * PZ;
+  *velY = R[1][0] * PX + R[1][1] * PY + R[1][2] * PZ;
+  *gyroZ = GZ * DEG_TO_RAD;
+}
 
 static uint16_t median_filter_3(uint16_t* data) {
   uint16_t middle;
@@ -206,7 +226,7 @@ static void rxcallback(dwDevice_t *dev) {
         txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_REPORT + 1;
         txPacket.payload[LPS_TWR_SEQ] = rxPacket.payload[LPS_TWR_SEQ];
         report2->distance = distanceCompute;
-        // estimatorKalmanGetSwarmInfo(&report2->velX, &report2->velY, &report2->gyroZ, &report2->height);
+        getSwarmInputsFromKalman(&report2->velX, &report2->velY, &report2->gyroZ, &report2->height);
         report2->flyStatus = state.fly;
         dwNewTransmit(dev);
         dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + 2 + sizeof(swarmTwrTagReportPayload_t));
@@ -239,7 +259,7 @@ static void rxcallback(dwDevice_t *dev) {
         memcpy(&report->pollRx, &poll_rx, 5);
         memcpy(&report->answerTx, &answer_tx, 5);
         memcpy(&report->finalRx, &final_rx, 5);
-        // estimatorKalmanGetSwarmInfo(&report->velX, &report->velY, &report->gyroZ, &report->height);
+        getSwarmInputsFromKalman(&report->velX, &report->velY, &report->gyroZ, &report->height);
         report->flyStatus = state.fly;
         dwNewTransmit(dev);
         dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + 2 + sizeof(swarmTwrTagReportPayload_t));
@@ -371,6 +391,12 @@ static void twrTagInit(dwDevice_t *dev)
   myId = (uint8_t)((configblockGetRadioAddress()) & 0x000000000f);
   myAddr = BASIC_ADDR + myId;
 
+  idPX = logGetVarId("kalman", "statePX");
+  idPY = logGetVarId("kalman", "statePY");
+  idPZ = logGetVarId("kalman", "statePZ");
+  idGZ = logGetVarId("gyro", "z");
+  idZ = logGetVarId("kalman", "stateZ");
+
   if (myId == 0) {
     receiverId = NUM_UWB - 1;
     comMode = transmitter;
@@ -453,5 +479,4 @@ LOG_ADD(LOG_UINT16, distance0, &state.distance[0])
 LOG_ADD(LOG_UINT16, distance1, &state.distance[1])
 LOG_ADD(LOG_UINT16, distance2, &state.distance[2])
 LOG_ADD(LOG_UINT16, distance3, &state.distance[3])
-LOG_ADD(LOG_UINT16, distance4, &state.distance[4])
 LOG_GROUP_STOP(ranging)
