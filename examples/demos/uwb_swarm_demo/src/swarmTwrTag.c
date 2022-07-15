@@ -54,6 +54,10 @@ typedef struct {
   float height[NUM_UWB];
   bool update[NUM_UWB];
   bool fly;
+  float myVelX;
+  float myVelY;
+  float myGyroZ;
+  float myHeight;
 } swarmInfo_t;
 static swarmInfo_t state;
 
@@ -227,6 +231,10 @@ static void rxcallback(dwDevice_t *dev) {
         txPacket.payload[LPS_TWR_SEQ] = rxPacket.payload[LPS_TWR_SEQ];
         report2->distance = distanceCompute;
         getSwarmInputsFromKalman(&report2->velX, &report2->velY, &report2->gyroZ, &report2->height);
+        state.myVelX = report2->velX;
+        state.myVelY = report2->velY;
+        state.myGyroZ = report2->gyroZ;
+        state.myHeight = report2->height;
         report2->flyStatus = state.fly;
         dwNewTransmit(dev);
         dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + 2 + sizeof(swarmTwrTagReportPayload_t));
@@ -260,6 +268,10 @@ static void rxcallback(dwDevice_t *dev) {
         memcpy(&report->answerTx, &answer_tx, 5);
         memcpy(&report->finalRx, &final_rx, 5);
         getSwarmInputsFromKalman(&report->velX, &report->velY, &report->gyroZ, &report->height);
+        state.myVelX = report->velX;
+        state.myVelY = report->velY;
+        state.myGyroZ = report->gyroZ;
+        state.myHeight = report->height;
         report->flyStatus = state.fly;
         dwNewTransmit(dev);
         dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH + 2 + sizeof(swarmTwrTagReportPayload_t));
@@ -444,7 +456,7 @@ static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int ma
   return count;
 }
 
-bool getSwarmTwrInfo(int agentId, uint16_t* distance, float* velX, float* velY, float* gyroZ, float* height) {
+bool getSwarmTwrInfo(int agentId, uint16_t* distance, float* velX, float* velY, float* gyroZ, float* height, float* myVelX, float* myVelY, float* myGyroZ, float* myHeight) {
   if (state.update[agentId] == true) {
     state.update[agentId] = false;
     *distance = state.distance[agentId];
@@ -452,6 +464,10 @@ bool getSwarmTwrInfo(int agentId, uint16_t* distance, float* velX, float* velY, 
     *velY = state.velY[agentId];
     *gyroZ = state.gyroZ[agentId];
     *height = state.height[agentId];
+    *myVelX = state.myVelX;
+    *myVelY = state.myVelY;
+    *myGyroZ = state.myGyroZ;
+    *myHeight = state.myHeight;
     return true;
   } else
     return false;

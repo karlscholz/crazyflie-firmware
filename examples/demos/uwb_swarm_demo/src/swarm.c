@@ -1,176 +1,162 @@
 /**
- * ,---------,       ____  _ __
- * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
- * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
- * | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
- *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
- *
- * Crazyflie control firmware
- *
- * Copyright (C) 2019 Bitcraze AB
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, in version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- *
- * swarm.c - App layer application of the onboard swarm demo. The crazyflie 
- * has to have the multiranger and the flowdeck version 2.
+ * swarm.c - App layer application of the onboard swarm demo with only UWB tags.
+ * The crazyflie has to have the locodeck and the flowdeck version 2.
+ * 
+ * Project page: https://shushuai3.github.io/swarm.html
+ * Paper: https://arxiv.org/abs/2003.05853
  */
 
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "app.h"
-
 #include "commander.h"
-
 #include "FreeRTOS.h"
 #include "task.h"
-
 #include "debug.h"
-
 #include "log.h"
 #include "param.h"
 
-#define DEBUG_MODULE "SWARM"
+#include <stdlib.h>
+#include <math.h>
+#include "num.h"
+#include "configblock.h"
+#include "estimator_kalman.h"
+#include "relative_localization.h"
+#include "swarmTwrTag.h"
 
-static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
-{
+static setpoint_t setpoint;
+static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
+static uint8_t myId;
+static float height = 0.4f;
+
+static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
   setpoint->position.z = z;
-
-
   setpoint->mode.yaw = modeVelocity;
   setpoint->attitudeRate.yaw = yawrate;
-
-
   setpoint->mode.x = modeVelocity;
   setpoint->mode.y = modeVelocity;
   setpoint->velocity.x = vx;
   setpoint->velocity.y = vy;
-
   setpoint->velocity_body = true;
+  commanderSetSetpoint(setpoint, 3);
 }
 
-typedef enum {
-    idle,
-    lowUnlock,
-    unlocked,
-    stopping
-} State;
+static void flyRandomIn1meter(float vel) {
+  // velocity direction [0 - 2pi] rad
+  float randomYaw = (rand() / (float) RAND_MAX) * 6.28f;
+  // velocity magnitude [0 - 1] m
+  float randomVel = vel*(rand() / (float)RAND_MAX);
+  float vxBody = randomVel * cosf(randomYaw);
+  float vyBody = randomVel * sinf(randomYaw);
+  for (int i = 1; i < 100; i++) {
+    setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
+    vTaskDelay(M2T(10));
+  }
+  for (int i = 1; i < 100; i++) {
+    setHoverSetpoint(&setpoint, -vxBody, -vyBody, height, 0);
+    vTaskDelay(M2T(10));
+  }
+}
 
-static State state = idle;
+// PID control of swarm flight
+#define SIGN(a) ((a >= 0) ? 1 : -1)
+static float rlPIDp = 2.0f, rlPIDi = 0.0001f, rlPIDd = 0.01f;
+static float PreErrX = 0, PreErrY = 0, IntErrX = 0, IntErrY = 0;
+static uint32_t rlPIDlastTime;
+static void moveWithLeaderAsOrigin(float posX, float posY) {
+  float dt = (float)(xTaskGetTickCount() - rlPIDlastTime) / configTICK_RATE_HZ;
+  rlPIDlastTime = xTaskGetTickCount();
+  if (dt > 1)
+    return;
+  float errX = -(posX - rlVarForCtrl[0][STATE_rlX]);
+  float errY = -(posY - rlVarForCtrl[0][STATE_rlY]);
+  float pid_vx = rlPIDp * errX;
+  float pid_vy = rlPIDp * errY;
+  float dx = (errX - PreErrX) / dt;
+  float dy = (errY - PreErrY) / dt;
+  PreErrX = errX;
+  PreErrY = errY;
+  pid_vx += rlPIDd * dx;
+  pid_vy += rlPIDd * dy;
+  IntErrX += errX * dt;
+  IntErrY += errY * dt;
+  pid_vx += rlPIDi * constrain(IntErrX, -0.5, 0.5);
+  pid_vy += rlPIDi * constrain(IntErrY, -0.5, 0.5);
+  pid_vx = constrain(pid_vx, -1.5f, 1.5f);
+  pid_vy = constrain(pid_vy, -1.5f, 1.5f);
+  setHoverSetpoint(&setpoint, pid_vx, pid_vy, height, 0);
+}
 
-static const uint16_t unlockThLow = 100;
-static const uint16_t unlockThHigh = 300;
-static const uint16_t stoppedTh = 500;
-
-static const float velMax = 1.0f;
-static const uint16_t radius = 300;
-
-static const float height_sp = 0.2f;
-
-#define MAX(a,b) ((a>b)?a:b)
-#define MIN(a,b) ((a<b)?a:b)
-
-void appMain()
-{
-  static setpoint_t setpoint;
-
+void appMain() {
   vTaskDelay(M2T(3000));
-
-  logVarId_t idUp = logGetVarId("range", "up");
-  logVarId_t idLeft = logGetVarId("range", "left");
-  logVarId_t idRight = logGetVarId("range", "right");
-  logVarId_t idFront = logGetVarId("range", "front");
-  logVarId_t idBack = logGetVarId("range", "back");
-  
-  paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
-  paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
-
-
-  float factor = velMax/radius;
-
-  //DEBUG_PRINT("%i", idUp);
-
   DEBUG_PRINT("Waiting for activation ...\n");
+
+  static bool onGround = true;
+  static bool keepFlying = false;
+  static uint32_t timeTakeOff;
+  static float desireX;
+  static float desireY;
+  static logVarId_t logIdStateIsFlying;
+  logIdStateIsFlying = logGetVarId("kalman", "inFlight");
+  myId = (uint8_t)(((configblockGetRadioAddress()) & 0x000000000f));
 
   while(1) {
     vTaskDelay(M2T(10));
-    //DEBUG_PRINT(".");
 
-    uint8_t positioningInit = paramGetUint(idPositioningDeck);
-    uint8_t multirangerInit = paramGetUint(idMultiranger);
+#ifdef MANUAL_CONTROL_LEADER
+    if (myId == 0) {
+      keepFlying = logGetUint(logIdStateIsFlying);
+      keepFlying = updateFlyStatus(myId, keepFlying);
+      continue;
+    }
+#endif
 
-    uint16_t up = logGetUint(idUp);
+    keepFlying = updateFlyStatus(myId, keepFlying);
 
-    if (state == unlocked) {
-      uint16_t left = logGetUint(idLeft);
-      uint16_t right = logGetUint(idRight);
-      uint16_t front = logGetUint(idFront);
-      uint16_t back = logGetUint(idBack);
-
-      uint16_t left_o = radius - MIN(left, radius);
-      uint16_t right_o = radius - MIN(right, radius);
-      float l_comp = (-1) * left_o * factor;
-      float r_comp = right_o * factor;
-      float velSide = r_comp + l_comp;
-
-      uint16_t front_o = radius - MIN(front, radius);
-      uint16_t back_o = radius - MIN(back, radius);
-      float f_comp = (-1) * front_o * factor;
-      float b_comp = back_o * factor;
-      float velFront = b_comp + f_comp;
-
-      uint16_t up_o = radius - MIN(up, radius);
-      float height = height_sp - up_o/1000.0f;
-
-      /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
-      DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
-      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);*/
-
-      if (1) {
-        setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
-        commanderSetSetpoint(&setpoint, 3);
+    if(relative_localization((float *)rlVarForCtrl) && keepFlying) {
+      // take off
+      if (onGround) {
+        estimatorKalmanInit();
+        vTaskDelay(M2T(2000));
+        for (int i = 0; i < 50; i++) {
+          setHoverSetpoint(&setpoint, 0, 0, height, 0);
+          vTaskDelay(M2T(100));
+        }
+        onGround = false;
+        timeTakeOff = xTaskGetTickCount();
+      }
+      uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
+      
+      // 0-20s random flight
+      if (timeInAir < 20000) {
+        flyRandomIn1meter(1.0f);
+        desireX = rlVarForCtrl[0][STATE_rlX];
+        desireY = rlVarForCtrl[0][STATE_rlY];
       }
 
-      if (height < 0.1f) {
-        state = stopping;
-        DEBUG_PRINT("X\n");
+      // 20-30s formation flight
+      if ((timeInAir > 20000) && (timeInAir < 30000)) {
+        moveWithLeaderAsOrigin(desireX, desireY);
+      }
+
+      // after 30s, atomic pattern flight
+      if ((timeInAir > 30000)) {
+          float radius = (float)myId * 0.5f;
+          float rlPosXofMeIn0 = radius * cosf(timeInAir);
+          float rlPosYofMeIn0 = radius * sinf(timeInAir);
+          desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
+          desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
+          moveWithLeaderAsOrigin(desireX, desireY);
       }
 
     } else {
-
-      if (state == stopping && up > stoppedTh) {
-        DEBUG_PRINT("%i", up);
-        state = idle;
-        DEBUG_PRINT("S\n");
+      // landing procedure
+      if(!onGround) {
+        for (int i = 1; i < 5; i++) {
+          setHoverSetpoint(&setpoint, 0, 0, 0.3f - (float)i * 0.05f, 0);
+          vTaskDelay(M2T(10));
+        }
       }
-
-      if (up < unlockThLow && state == idle && up > 0.001f) {
-        DEBUG_PRINT("Waiting for hand to be removed!\n");
-        state = lowUnlock;
-      }
-
-      if (up > unlockThHigh && state == lowUnlock && positioningInit && multirangerInit) {
-        DEBUG_PRINT("Unlocked!\n");
-        state = unlocked;
-      }
-
-      if (state == idle || state == stopping) {
-        memset(&setpoint, 0, sizeof(setpoint_t));
-        commanderSetSetpoint(&setpoint, 3);
-      }
-    }
+      onGround = true;
+    } 
   }
 }

@@ -1,2 +1,3 @@
 obj-y += swarm.o
 obj-y += swarmTwrTag.o
+obj-y += relative_localization.o
