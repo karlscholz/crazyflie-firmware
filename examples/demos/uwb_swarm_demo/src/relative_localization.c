@@ -13,6 +13,7 @@
 #include "log.h"
 #include "swarmTwrTag.h"
 #include "relative_localization.h"
+#include "cf_math.h"
 
 static bool is_init = false;
 
@@ -47,15 +48,6 @@ static float HTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 HTm = {STATE_DIM_rl, 1, HTd};
 static float PHTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
-
-static inline void mat_trans(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst)
-{ configASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst)); }
-static inline void mat_inv(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst)
-{ configASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst)); }
-static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst)
-{ configASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst)); }
-static inline float arm_sqrt(float32_t in)
-{ float pOut = 0; arm_status result = arm_sqrt_f32(in, &pOut); configASSERT(ARM_MATH_SUCCESS == result); return pOut; }
 
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt) {
   arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)rlState[n].P};
@@ -99,7 +91,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
 
   xij = rlState[n].S[STATE_rlX];
   yij = rlState[n].S[STATE_rlY];
-  float distPred = arm_sqrt(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
+  float distPred = sqrtf(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
   float distMeas = (float)(dij / 1000.0f);
   // UWB bias model (fitting with optiTrack measurement)
   distMeas = distMeas - (0.048f * distMeas + 0.65f);
@@ -110,15 +102,17 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   mat_trans(&H, &HTm); // H'
   mat_mult(&Pm, &HTm, &PHTm); // PH'
   float HPHR = powf(Ruwb, 2); // HPH' + R
-  for (int i=0; i<STATE_DIM_rl; i++) {
+  for (int i = 0; i < STATE_DIM_rl; i++) {
     HPHR += H.pData[i]*PHTd[i];
   }
-  for (int i=0; i<STATE_DIM_rl; i++) {
-    K[i] = PHTd[i]/HPHR; // kalman gain = (PH'(HPH' + R )^-1)
+  for (int i = 0; i < STATE_DIM_rl; i++) {
+    K[i] = PHTd[i] / HPHR; // kalman gain = (PH'(HPH' + R )^-1)
     rlState[n].S[i] = rlState[n].S[i] + K[i] * (distMeas - distPred); // state update
-  }     
+  }
   mat_mult(&Km, &H, &tmpNN1m); // KH
-  for (int i=0; i<STATE_DIM_rl; i++) { tmpNN1d[STATE_DIM_rl*i+i] -= 1; } // KH - I
+  for (int i = 0; i < STATE_DIM_rl; i++) {
+    tmpNN1d[STATE_DIM_rl*i+i] -= 1;
+  } // KH - I
   mat_trans(&tmpNN1m, &tmpNN2m); // (KH - I)'
   mat_mult(&tmpNN1m, &Pm, &tmpNN3m); // (KH - I) * P
   mat_mult(&tmpNN3m, &tmpNN2m, &Pm); // (KH - I) * P * (KH - I)'

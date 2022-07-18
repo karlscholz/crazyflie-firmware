@@ -26,6 +26,7 @@ static setpoint_t setpoint;
 static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
 static float height = 0.4f;
+static bool keepFlying = false;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
@@ -91,7 +92,6 @@ void appMain() {
   DEBUG_PRINT("Waiting for activation ...\n");
 
   static bool onGround = true;
-  static bool keepFlying = false;
   static uint32_t timeTakeOff;
   static float desireX;
   static float desireY;
@@ -100,7 +100,7 @@ void appMain() {
   myId = (uint8_t)(((configblockGetRadioAddress()) & 0x000000000f));
 
   while(1) {
-    vTaskDelay(M2T(10));
+    vTaskDelay(M2T(20));
 
 #ifdef MANUAL_CONTROL_LEADER
     if (myId == 0) {
@@ -134,12 +134,12 @@ void appMain() {
       }
 
       // 20-30s formation flight
-      if ((timeInAir > 20000) && (timeInAir < 30000)) {
+      if ((timeInAir >= 20000) && (timeInAir < 30000)) {
         moveWithLeaderAsOrigin(desireX, desireY);
       }
 
       // after 30s, atomic pattern flight
-      if ((timeInAir > 30000)) {
+      if (timeInAir >= 30000) {
           float radius = (float)myId * 0.5f;
           float rlPosXofMeIn0 = radius * cosf(timeInAir);
           float rlPosYofMeIn0 = radius * sinf(timeInAir);
@@ -160,3 +160,10 @@ void appMain() {
     } 
   }
 }
+
+PARAM_GROUP_START(rl_ctrl)
+PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
+PARAM_ADD(PARAM_FLOAT, PID_P, &rlPIDp)
+PARAM_ADD(PARAM_FLOAT, PID_I, &rlPIDi)
+PARAM_ADD(PARAM_FLOAT, PID_D, &rlPIDd)
+PARAM_GROUP_STOP(rl_ctrl)
