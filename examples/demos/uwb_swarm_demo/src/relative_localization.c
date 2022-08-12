@@ -14,6 +14,7 @@
 #include "swarmTwrTag.h"
 #include "relative_localization.h"
 #include "cf_math.h"
+#include "debug.h"
 
 static bool is_init = false;
 
@@ -148,6 +149,8 @@ bool relative_localization(float* rlStateForControl) {
         uint32_t osTick = xTaskGetTickCount();
         float dtEKF = (float)(osTick - rlState[n].lastTimetick) / configTICK_RATE_HZ;
         rlState[n].lastTimetick = osTick;
+        // DEBUG_PRINT("vxi: %f, vyi: %f, ri: %f, hi: %f\n", (double)vxi, (double)vyi, (double)ri, (double)hi);
+        // DEBUG_PRINT("vxj: %f, vyj: %f, rj: %f, hj: %f\n", (double)vxj, (double)vyj, (double)rj, (double)hj);
         relativeEKF(n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
       } else {
         rlState[n].lastTimetick = xTaskGetTickCount();

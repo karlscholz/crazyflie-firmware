@@ -450,6 +450,16 @@ void estimatorKalmanGetEstimatedPos(point_t* pos) {
   pos->z = coreData.S[KC_STATE_Z];
 }
 
+void estimatorKalmanGetEstimatedVel(point_t* vel) {
+  vel->x = coreData.S[KC_STATE_PX];
+  vel->y = coreData.S[KC_STATE_PY];
+  vel->z = coreData.S[KC_STATE_PZ];
+}
+
+void estimatorKalmanGetAverageGyroZ(float* gyroZ) {
+  *gyroZ = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
+}
+
 void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
   memcpy(rotationMatrix, coreData.R, 9*sizeof(float));
 }

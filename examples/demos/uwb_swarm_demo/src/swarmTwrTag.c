@@ -80,23 +80,20 @@ typedef struct {
 } median_data_t;
 static median_data_t median_data[NUM_UWB];
 
-static logVarId_t idPX; // bug: read from log has influence on distance4 logging
-static logVarId_t idPY;
-static logVarId_t idPZ;
-static logVarId_t idGZ;
-static logVarId_t idZ;
 static void getSwarmInputsFromKalman(float* velX, float* velY, float* gyroZ, float* height){
-  // rotation matrix
-  float R[3][3];
+  float R[3][3], gyroZtemp;
+  point_t point;
   estimatorKalmanGetEstimatedRot((float*)R);
-  float PX = logGetUint(idPX);
-  float PY = logGetUint(idPY);
-  float PZ = logGetUint(idPZ);
-  float GZ = logGetUint(idGZ);
-  *height = logGetUint(idZ);
+  estimatorKalmanGetEstimatedVel(&point);
+  float PX = point.x;
+  float PY = point.y;
+  float PZ = point.z;
+  estimatorKalmanGetEstimatedPos(&point);
+  *height = point.z;
+  estimatorKalmanGetAverageGyroZ(&gyroZtemp);
+  *gyroZ = gyroZtemp;
   *velX = R[0][0] * PX + R[0][1] * PY + R[0][2] * PZ;
   *velY = R[1][0] * PX + R[1][1] * PY + R[1][2] * PZ;
-  *gyroZ = GZ * DEG_TO_RAD;
 }
 
 static uint16_t median_filter_3(uint16_t* data) {
@@ -402,12 +399,6 @@ static void twrTagInit(dwDevice_t *dev)
 
   myId = (uint8_t)((configblockGetRadioAddress()) & 0x000000000f);
   myAddr = BASIC_ADDR + myId;
-
-  idPX = logGetVarId("kalman", "statePX");
-  idPY = logGetVarId("kalman", "statePY");
-  idPZ = logGetVarId("kalman", "statePZ");
-  idGZ = logGetVarId("gyro", "z");
-  idZ = logGetVarId("kalman", "stateZ");
 
   if (myId == 0) {
     receiverId = NUM_UWB - 1;
