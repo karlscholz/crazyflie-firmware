@@ -65,7 +65,7 @@ bool estimatorKalmanTaskTest();
 
 void estimatorKalmanGetEstimatedPos(point_t* pos);
 void estimatorKalmanGetEstimatedVel(point_t* vel);
-void estimatorKalmanGetAverageGyroZ(float* gyroZ);
+void estimatorKalmanGetGyroZ(float* gyroZ);
 
 /**
  * Copies 9 floats representing the current state rotation matrix

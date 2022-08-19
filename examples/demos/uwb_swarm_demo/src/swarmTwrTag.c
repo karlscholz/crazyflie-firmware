@@ -90,7 +90,7 @@ static void getSwarmInputsFromKalman(float* velX, float* velY, float* gyroZ, flo
   float PZ = point.z;
   estimatorKalmanGetEstimatedPos(&point);
   *height = point.z;
-  estimatorKalmanGetAverageGyroZ(&gyroZtemp);
+  estimatorKalmanGetGyroZ(&gyroZtemp);
   *gyroZ = gyroZtemp;
   *velX = R[0][0] * PX + R[0][1] * PY + R[0][2] * PZ;
   *velY = R[1][0] * PX + R[1][1] * PY + R[1][2] * PZ;

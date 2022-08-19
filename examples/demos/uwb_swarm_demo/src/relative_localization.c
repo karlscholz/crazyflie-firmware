@@ -62,15 +62,15 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   rlState[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
   rlState[n].S[STATE_rlYaw] = rlState[n].S[STATE_rlYaw] + (rj - ri) * dt;
 
-  A[0][0] = 1;
+  A[0][0] = 1.0f;
   A[0][1] = ri * dt;
   A[0][2] = (-syaw * vxj - cyaw * vyj) * dt;
   A[1][0] = -ri * dt;
-  A[1][1] = 1;
+  A[1][1] = 1.0f;
   A[1][2] = (cyaw * vxj - syaw * vyj) * dt;
-  A[2][0] = 0;
-  A[2][1] = 0;
-  A[2][2] = 1;
+  A[2][0] = 0.0f;
+  A[2][1] = 0.0f;
+  A[2][2] = 1.0f;
 
   mat_mult(&Am, &Pm, &tmpNN1m); // A P
   mat_trans(&Am, &tmpNN2m); // A'
