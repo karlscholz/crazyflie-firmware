@@ -100,12 +100,13 @@ void appMain() {
   myId = (uint8_t)(((configblockGetRadioAddress()) & 0x000000000f));
 
   while(1) {
-    vTaskDelay(M2T(20));
+    vTaskDelay(M2T(10));
 
 #ifdef MANUAL_CONTROL_LEADER
     if (myId == 0) {
       keepFlying = logGetUint(logIdStateIsFlying);
       keepFlying = updateFlyStatus(myId, keepFlying);
+      relative_localization((float *)rlVarForCtrl);
       continue;
     }
 #endif
