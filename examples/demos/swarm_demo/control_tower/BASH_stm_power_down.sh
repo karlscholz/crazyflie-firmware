@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+echo "Rebooting 10"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E710
+echo "Rebooting 11"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E711
+echo "Rebooting 12"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E712
+echo "Rebooting 13"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E713
+echo "Rebooting 14"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E714
+echo "Rebooting 15"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E715
+echo "Rebooting 16"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E716
+echo "Rebooting 17"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E717
+echo "Rebooting 18"
+python.exe swarm_scripts/script_stm_power_down.py radio://0/80/2M/E7E7E7E718
