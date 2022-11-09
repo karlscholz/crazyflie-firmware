@@ -24,6 +24,8 @@
 
 # & C:/Users/ScholzKarl/AppData/Local/Programs/Python/Python310/python.exe c:/Users/ScholzKarl/Desktop/crazyflie-firmware/examples/demos/swarm_demo/control_tower/control_towerKS.py 9 s
 
+#cd .\Desktop\crazyflie-firmware\examples\demos\swarm_demo\control_tower\
+
 
 import time
 import cflib.crtp  # noqa
