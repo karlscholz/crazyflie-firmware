@@ -186,27 +186,37 @@ void appMain() {
       keepFlying = updateFlyStatus(myId, keepFlying);
       //run the relative localization algorithm, to get the relative position of the swarm accessable in swarm.c via rlVarForCtrl
       relative_localization((float *)rlVarForCtrl);
+      //skip the rest of the loop and goes back up to while(1){
       continue;
     }
 #endif
 
+    // retrieve flight state from kalam filter
     keepFlying = updateFlyStatus(myId, keepFlying);
 
+    // if keepFlying is true(the Leader is flying), the swarm is flying and comConnection isn't lost
     if(relative_localization((float *)rlVarForCtrl) && keepFlying) {
       // take off
       if (onGround) {
+        // initiate kalman filter
         estimatorKalmanInit();
+        // wait for 2 seconds to let the kalman filter settle
         vTaskDelay(M2T(2000));
+        // gradually increase setpoint within 500ms to height(0.4m) = takeoff
         for (int i = 0; i < 50; i++) {
           setHoverSetpoint(&setpoint, 0, 0, height, 0);
           vTaskDelay(M2T(100));
         }
+        // set onGround to false
         onGround = false;
+        //remember takeoff timestamp
         timeTakeOff = xTaskGetTickCount();
       }
+      //calculate the current flight time to decide behavior
       uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
       
       // 0-20s random flight
+      // the desired position is set to the current position as start position for the next behavior step
       if (timeInAir < 20000) {
         flyRandomIn1meter(1.0f);
         desireX = rlVarForCtrl[0][STATE_rlX];
@@ -214,14 +224,19 @@ void appMain() {
       }
 
       // 20-30s formation flight
+      // the current position was determined in the previous step and will now be held relative to the leader
       if ((timeInAir >= 20000) && (timeInAir < 30000)) {
         moveWithLeaderAsOrigin(desireX, desireY);
       }
 
       // after 30s, atomic pattern flight
+      // prediction is good enough 
       if (timeInAir >= 30000) {
+          // radius of the circle is set dependant of the ID, the lower the ID, the smaller the radius. Spacing is 0.5m
           float radius = (float)myId * 0.5f;
+          // calculate time in seconds to determine the next position
           float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
+          //set the x and y position accordingly
           float rlPosXofMeIn0 = radius * cosf(timeInSecond);
           float rlPosYofMeIn0 = radius * sinf(timeInSecond);
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
