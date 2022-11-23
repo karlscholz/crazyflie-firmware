@@ -22,15 +22,15 @@
 #include "relative_localization.h"
 #include "swarmTwrTag.h"
 
-//creates swarm.c wide variable of stabilizer_type.c struct setpoint
+// creates swarm.c wide variable of stabilizer_type.c struct setpoint
 static setpoint_t setpoint;
-//2D-float array with all UWB Nodes in one and X, Y, YAW in the other direction
+// 2D-float array with all UWB Nodes in one and X, Y, YAW in the other direction
 static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
-//Id of this dorne, based on the 40 bit radio adress, but only the last hex character(the last 4 bits) are used.
+// Id of this dorne, based on the 40 bit radio adress, but only the last hex character(the last 4 bits) are used.
 static uint8_t myId;
-//fixed height for all operations to 0.4 m
+// fixed height for all operations to 0.4 m
 static float height = 0.4f;
-//variable that has to be true, otherwise a landing will be initiated within the next taskloop
+// variable that has to be true, otherwise a landing will be initiated within the next taskloop
 static bool keepFlying = false;
 
 /* Gives a new setpoint to the High Level Controller
@@ -128,22 +128,22 @@ static void moveWithLeaderAsOrigin(float posX, float posY) {
   // calculate the proportional part for the velocity
   float pid_vx = rlPIDp * errX;
   float pid_vy = rlPIDp * errY;
-  //calculate the derivative part
+  // calculate the derivative part
   float dx = (errX - PreErrX) / dt;
   float dy = (errY - PreErrY) / dt;
-  //store current error for derivative in the next loop
+  // store current error for derivative in the next loop
   PreErrX = errX;
   PreErrY = errY;
-  //calculate the derivative part and add it to the velocity
+  // calculate the derivative part and add it to the velocity
   pid_vx += rlPIDd * dx;
   pid_vy += rlPIDd * dy;
-  //add this loops error to form the integral part
+  // add this loops error to form the integral part
   IntErrX += errX * dt;
   IntErrY += errY * dt;
-  //calculate the integral part by the constrained integral memory and add it to the velocity
+  // calculate the integral part by the constrained integral memory and add it to the velocity
   pid_vx += rlPIDi * constrain(IntErrX, -0.5, 0.5);
   pid_vy += rlPIDi * constrain(IntErrY, -0.5, 0.5);
-  //constrain the calculated velocity to safe maximum value
+  // constrain the calculated velocity to safe maximum value
   pid_vx = constrain(pid_vx, -1.5f, 1.5f);
   pid_vy = constrain(pid_vy, -1.5f, 1.5f);
   // change the setpoint and send it to the High Level Commander
@@ -161,21 +161,30 @@ void appMain() {
   vTaskDelay(M2T(3000));
   DEBUG_PRINT("Waiting for activation ...\n");
 
+  // variable to keep track of takeoff and landing
   static bool onGround = true;
+  // remember the takeoff timestamp
   static uint32_t timeTakeOff;
+  // setpoint variables for xy position PID controller, gets initialized with current position
   static float desireX;
   static float desireY;
+  // information for keepFlying is retrieved from the kalam filter
   static logVarId_t logIdStateIsFlying;
   logIdStateIsFlying = logGetVarId("kalman", "inFlight");
+  // Id of this dorne, based on the 40 bit radio adress, but only the last hex character(the last 4 bits) are used.
   myId = (uint8_t)(((configblockGetRadioAddress()) & 0x000000000f));
 
   while(1) {
     vTaskDelay(M2T(10));
 
+// if MANUAL_CONTROL_LEADER flag is set, and the last hex character is 0, the leader is actively controlled via cfclient software
 #ifdef MANUAL_CONTROL_LEADER
     if (myId == 0) {
+      // retrieve flight state from kalam filter
       keepFlying = logGetUint(logIdStateIsFlying);
+      // update keepFlying and make it known to the swarm
       keepFlying = updateFlyStatus(myId, keepFlying);
+      //run the relative localization algorithm, to get the relative position of the swarm accessable in swarm.c via rlVarForCtrl
       relative_localization((float *)rlVarForCtrl);
       continue;
     }
