@@ -236,17 +236,21 @@ void appMain() {
           float radius = (float)myId * 0.5f;
           // calculate time in seconds to determine the next position
           float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
-          //set the x and y position accordingly
+          // set the x and y position accordingly
           float rlPosXofMeIn0 = radius * cosf(timeInSecond);
           float rlPosYofMeIn0 = radius * sinf(timeInSecond);
+          // subtract the yaw angle of the leader, so it doesn't interfere with the circling of the followers
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
+          // pass the desired position to the PID controller
           moveWithLeaderAsOrigin(desireX, desireY);
       }
 
+    // no coms or leader landed
     } else {
       // landing procedure
       if(!onGround) {
+        // gradually decrease setpoint within 400ms from 0.3m 0.1m and drop to avoid drífting in downwash = landing
         for (int i = 1; i < 5; i++) {
           setHoverSetpoint(&setpoint, 0, 0, 0.3f - (float)i * 0.05f, 0);
           vTaskDelay(M2T(10));
