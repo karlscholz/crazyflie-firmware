@@ -5,6 +5,10 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c"
+        "bootloader.h": "c",
+        "configblock.h": "c",
+        "freertos.h": "c",
+        "locodeck.h": "c",
+        "arm_math.h": "c"
     }
 }
