@@ -12,9 +12,11 @@ typedef enum {
   INPUT_vxi, INPUT_vyi, INPUT_ri, INPUT_vxj, INPUT_vyj, INPUT_rj, INPUT_DIM
 } rlKalmanInputIdx;
 
-// array with size NUM_UWB 
+// the datatype for array rlState with size NUM_UWB
 typedef struct {
+  // array for X Y and YAW
   float S[STATE_DIM_rl];
+  // covariance matrix --> 2d array for X Y and YAW
   float P[STATE_DIM_rl][STATE_DIM_rl];
   uint32_t lastTimetick;
   bool firstTime;
