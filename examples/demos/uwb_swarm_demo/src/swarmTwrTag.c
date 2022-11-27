@@ -194,7 +194,7 @@ static void rxcallback(dwDevice_t *dev) {
       case LPS_TWR_REPORT: {
         swarmTwrTagReportPayload_t *report = (swarmTwrTagReportPayload_t *)(rxPacket.payload+2);
         double tround1, treply1, treply2, tround2, tprop_ctn, tprop;
-        // copy all 5 uint8_t variables of the report->pollRx array into pollrx dwTime_t union 
+        // copy all 5 uint8_t variables of the report->XYZ array into XYZ dwTime_t union 
         memcpy(&poll_rx, &report->pollRx, 5);
         memcpy(&answer_tx, &report->answerTx, 5);
         memcpy(&final_rx, &report->finalRx, 5);
