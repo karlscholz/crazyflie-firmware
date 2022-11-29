@@ -4,7 +4,7 @@
 #include "locodeck.h"
 
 // the amount of quadrotors you want to fly with, inclunding the leader
-#define NUM_UWB 2
+#define NUM_UWB 3
 // if MANUAL_CONTROL_LEADER flag is set, and the last hex character is 0, the leader is actively controlled via cfclient software
 #define MANUAL_CONTROL_LEADER
 
