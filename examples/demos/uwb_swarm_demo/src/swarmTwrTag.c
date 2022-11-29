@@ -438,30 +438,32 @@ static void rxcallback(dwDevice_t *dev) {
   }
 }
 
-/* TODO@KS Transmitter mode: sends a POLL or FINAL packet to the receiver or changes
- * mode to receiver.
- * Receiver mode: sends an ANSWER packet to the transmitter
+/* callback function .onEvent of uwbAlgorithm_t uwbTwrTagAlgorithm
  *
  * Parameters:
- * - dwDevice_t *dev --> of the other uwb node
+ * - dwDevice_t *dev
+ * - uwbEvent_t event
  * Returns:
- * - Nothing
+ * - MAX_TIMEOUT (0xffffffffUL)
  *                                                                            */
 static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
 {
   switch (event) {
     case eventPacketReceived:
+      // if event is packet received, pass it on to the rxCallback function
       rxcallback(dev);
       if (NUM_UWB > 2)
         comModeTurnCheck = false;
       break;
     case eventPacketSent:
+      // if event is packet sent, pass it on to the txCallback function
       txcallback(dev);
       break;
     case eventTimeout:
     case eventReceiveTimeout:
     case eventReceiveFailed:
       if (comMode == transmitter) {
+        // if event is timeout, receive timeout or receive failed and comMode is transmitter, create a new POLL packet and send it to the current receiver
         txPacket.payload[LPS_TWR_TYPE] = LPS_TWR_POLL;
         txPacket.payload[LPS_TWR_SEQ] = 0;
         txPacket.sourceAddress = myAddr;
@@ -472,9 +474,11 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
         dwWaitForResponse(dev, true);
         dwStartTransmit(dev);
       } else {
+        // if event is timeout, receive timeout or receive failed and comMode is receiver, check if any uwb becomes a tx and if my comModeTurnCheck is true
         if (xTaskGetTickCount() > comModeTurnCheckTick + 20 && NUM_UWB > 2) {
           // check if any uwb becomes transmitter within 20ms
           if (comModeTurnCheck == true) {
+            // if so, change comMode to transmitter and create a new POLL packet and send it to the current receiver
             comMode = transmitter;
             dwIdle(dev);
             dwSetReceiveWaitTimeout(dev, 1000);
@@ -502,12 +506,21 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
   return MAX_TIMEOUT;
 }
 
+/* Initialisation of the two way ranging algorithm, also initialises the comMode.
+ *
+ * Parameters:
+ * - dwDevice_t *dev
+ * Returns:
+ * - Nothing
+ *                                                                            */
 static void twrTagInit(dwDevice_t *dev)
 {
+  // zero the txPacket
   memset(&txPacket, 0, sizeof(txPacket));
   MAC80215_PACKET_INIT(txPacket, MAC802154_TYPE_DATA);
   txPacket.pan = 0xbccf;
 
+  // zero all the TWR calculation variables
   memset(&poll_tx, 0, sizeof(poll_tx));
   memset(&poll_rx, 0, sizeof(poll_rx));
   memset(&answer_tx, 0, sizeof(answer_tx));
@@ -515,29 +528,37 @@ static void twrTagInit(dwDevice_t *dev)
   memset(&final_tx, 0, sizeof(final_tx));
   memset(&final_rx, 0, sizeof(final_rx));
 
+  // calculate my own Id based on the 40 bit radio adress, but only the last hex character(the last 4 bits) are used.
   myId = (uint8_t)((configblockGetRadioAddress()) & 0x000000000f);
+  // set my UWB adress to the UWB BASIC_ADDR + myId
   myAddr = BASIC_ADDR + myId;
 
   if (myId == 0) {
+    // if myId is 0, I am the leader, so I start as transmitter and i'll contact the the last drone
     receiverId = NUM_UWB - 1;
     comMode = transmitter;
     dwSetReceiveWaitTimeout(dev, 1000);
   } else {
+    // if myId is not 0, I am not the leader, so I start as receiver
     comMode = receiver;
     dwSetReceiveWaitTimeout(dev, 10000);
   }
 
+  // zero the distance median array
   for (int i = 0; i < NUM_UWB; i++) {
     median_data[i].pointer = 0;
     state.update[i] = false;
   }
 
+  // set fly state to false to prevent the drone from flying before the leader has taken off
   state.fly = false;
   if (NUM_UWB > 2)
     comModeTurnCheck = false;
+  // initialise with false, so it has to wait until the first packet is received
   rangingOk = false;
 }
 
+// the following functions are not of any interest, they just make stuff available for uwbAlgorithm_t uwbTwrTagAlgorithm
 static bool isRangingOk() {
   return rangingOk;
 }
