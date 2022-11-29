@@ -438,6 +438,15 @@ static void rxcallback(dwDevice_t *dev) {
   }
 }
 
+/* TODO@KS Transmitter mode: sends a POLL or FINAL packet to the receiver or changes
+ * mode to receiver.
+ * Receiver mode: sends an ANSWER packet to the transmitter
+ *
+ * Parameters:
+ * - dwDevice_t *dev --> of the other uwb node
+ * Returns:
+ * - Nothing
+ *                                                                            */
 static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
 {
   switch (event) {
