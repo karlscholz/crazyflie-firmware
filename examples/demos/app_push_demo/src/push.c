@@ -79,6 +79,7 @@ static const float velMax = 1.0f;
 static const uint16_t radius = 300;
 
 static const float height_sp = 0.2f;
+static uint8_t hallo = 0;
 
 #define MAX(a,b) ((a>b)?a:b)
 #define MIN(a,b) ((a<b)?a:b)
@@ -107,6 +108,7 @@ void appMain()
 
   while(1) {
     vTaskDelay(M2T(10));
+    hallo++;
     //DEBUG_PRINT(".");
 
     uint8_t positioningInit = paramGetUint(idPositioningDeck);
@@ -141,7 +143,7 @@ void appMain()
 
       if (1) {
         setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
-        commanderSetSetpoint(&setpoint, 3);
+        //commanderSetSetpoint(&setpoint, 3);
       }
 
       if (height < 0.1f) {
@@ -169,8 +171,18 @@ void appMain()
 
       if (state == idle || state == stopping) {
         memset(&setpoint, 0, sizeof(setpoint_t));
-        commanderSetSetpoint(&setpoint, 3);
+        //commanderSetSetpoint(&setpoint, 3);
       }
     }
   }
 }
+
+/**
+ * [Documentation for the puush group ...]
+ */
+LOG_GROUP_START(puush)
+/**
+ * @brief [Documentation for hallo below ...]
+ */
+LOG_ADD_CORE(LOG_UINT8, hallo, &hallo)
+LOG_GROUP_STOP(puush)
