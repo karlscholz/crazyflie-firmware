@@ -26,6 +26,7 @@ static setpoint_t setpoint;
 static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
 static float height = 0.4f;
+static float xydistance = 1.0f;
 static bool keepFlying = false;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
@@ -139,12 +140,31 @@ void appMain() {
         moveWithLeaderAsOrigin(desireX, desireY);
       }
 
-      // after 30s, atomic pattern flight
+      // after 30s, diamond pattern flight
       if (timeInAir >= 30000) {
-          float radius = (float)myId * 0.5f;
-          float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
-          float rlPosXofMeIn0 = radius * cosf(timeInSecond);
-          float rlPosYofMeIn0 = radius * sinf(timeInSecond);
+          float rlPosXofMeIn0;
+          float rlPosYofMeIn0;
+          switch(myId){
+            case 1: // left
+              rlPosXofMeIn0 = -xydistance;
+              rlPosYofMeIn0 = xydistance;
+              break;
+            case 2: // right
+              rlPosXofMeIn0 = -xydistance;
+              rlPosYofMeIn0 = -xydistance;
+              break;
+            case 3: // back
+              rlPosXofMeIn0 = -2*xydistance;
+              rlPosYofMeIn0 = 0;
+              break;
+            default:
+              DEBUG_PRINT("myId is not in the range of 0-3\n");
+              desireY = rlVarForCtrl[0][STATE_rlX];
+              desireX = rlVarForCtrl[0][STATE_rlY];
+              moveWithLeaderAsOrigin(desireX, desireY);
+              continue;
+          }
+          // yaw compensation
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           moveWithLeaderAsOrigin(desireX, desireY);
