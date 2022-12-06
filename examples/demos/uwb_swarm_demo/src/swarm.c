@@ -242,7 +242,7 @@ void appMain() {
           // subtract the yaw angle of the leader, so it doesn't interfere with the circling of the followers
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
-          // pass the desired position to the PID controller
+          // pass the desired position to the velocity PID controller
           moveWithLeaderAsOrigin(desireX, desireY);
       }
 
