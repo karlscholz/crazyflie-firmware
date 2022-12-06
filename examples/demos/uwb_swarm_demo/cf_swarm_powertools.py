@@ -47,9 +47,8 @@ print("The Adresses are:")
 for i in adressList:
     print(i)
 
-runAgain = True
-while(runAgain):
-    selected = input('\nChoose from the following options:\n   STM32 Power Down:\td\n   STM32 Power Up:\tu\n   STM32 Reboot:     \tr\n   Platform Shutdown:\tshutdown\n')#\n   Upload Firmware:\tfirmware\n   (For upload you have to be in the project folder(or app layer))')
+while(True):
+    selected = input('\nChoose from the following options:\n   STM32 Power Down:\td\n   STM32 Power Up:\tu\n   STM32 Reboot:     \tr\n   Platform Shutdown:\tshutdown\n\n   Ctrl+C to exit\n')#\n   Upload Firmware:\tfirmware\n   (For upload you have to be in the project folder(or app layer))')
     if selected == "d":
         for a in adressList:
             print(f"Powering down the STM32 on {a}")
@@ -89,7 +88,3 @@ while(runAgain):
     #             subprocess.run("python.exe -m cfloader flash build/cf2.bin stm32-fw -w {a}")
     #         except Exception as e:
     #             print(f"Failed to upload the firmware on {a}: {e}")
-    
-    againYN = input('again? (y/n): ')
-    if againYN == "n":
-        runAgain = False
