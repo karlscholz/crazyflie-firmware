@@ -68,10 +68,12 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   float yij = rlState[n].S[STATE_rlY];
 
   // prediction
+  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction line 1 (A*x+B*u)
   rlState[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
   rlState[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
   rlState[n].S[STATE_rlYaw] = rlState[n].S[STATE_rlYaw] + (rj - ri) * dt;
 
+  // A Matrix 
   A[0][0] = 1.0f;
   A[0][1] = ri * dt;
   A[0][2] = (-syaw * vxj - cyaw * vyj) * dt;
@@ -82,6 +84,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   A[2][1] = 0.0f;
   A[2][2] = 1.0f;
 
+  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction part of line 2 w/o Q
   mat_mult(&Am, &Pm, &tmpNN1m); // A P
   mat_trans(&Am, &tmpNN2m); // A'
   mat_mult(&tmpNN1m, &tmpNN2m, &Pm); // A P A'
