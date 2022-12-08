@@ -9,6 +9,7 @@
         "configblock.h": "c",
         "freertos.h": "c",
         "locodeck.h": "c",
-        "arm_math.h": "c"
+        "arm_math.h": "c",
+        "*.tcc": "c"
     }
 }

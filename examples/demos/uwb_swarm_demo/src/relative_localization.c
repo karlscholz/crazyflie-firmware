@@ -68,7 +68,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   float yij = rlState[n].S[STATE_rlY];
 
   // prediction
-  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction line 1 (A*x+B*u)
+  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction line 1 (A*x+B*u) (Matlab_Kalmanfilter.png)
   rlState[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
   rlState[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
   rlState[n].S[STATE_rlYaw] = rlState[n].S[STATE_rlYaw] + (rj - ri) * dt;
@@ -84,11 +84,12 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   A[2][1] = 0.0f;
   A[2][2] = 1.0f;
 
-  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction part of line 2 w/o Q
+  // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction part of line 2 w/o Q (Matlab_Kalmanfilter.png)
   mat_mult(&Am, &Pm, &tmpNN1m); // A P
   mat_trans(&Am, &tmpNN2m); // A'
   mat_mult(&tmpNN1m, &tmpNN2m, &Pm); // A P A'
 
+  // Initiate the P matrix (covergence matrix) with the initial values and add the initial deviation
   // BQB' = [ Qv*c^2 + Qv*s^2 + Qr*y^2 + Qv,                       -Qr*x*y, -Qr*y]
   //        [                       -Qr*x*y, Qv*c^2 + Qv*s^2 + Qr*x^2 + Qv,  Qr*x]
   //        [                         -Qr*y,                          Qr*x,  2*Qr]*dt^2
@@ -103,9 +104,12 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   rlState[n].P[2][1] += dt2 * (Qr * xij);
   rlState[n].P[2][2] += dt2 * (2 * Qr);
 
+  //get the last X and Y estimate from the neighbor's POV
   xij = rlState[n].S[STATE_rlX];
   yij = rlState[n].S[STATE_rlY];
+  // predict the distance between the two nodes based on the estimates
   float distPred = sqrtf(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
+  // convert the measured distance to meters
   float distMeas = (float)(dij / 1000.0f);
   // UWB bias model (fitting with optiTrack measurement)
   distMeas = distMeas - (0.048f * distMeas + 0.65f);
@@ -113,16 +117,22 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   h[1] = yij / distPred;
   h[2] = 0;
 
+  //H Matrix = C Matrix
   mat_trans(&H, &HTm); // H'
+  // https://youtu.be/VFXf1lIZ3p8?t=229 3:49 Update part, nominator of line 1 Kalman Gain (Matlab_Kalmanfilter.png)
   mat_mult(&Pm, &HTm, &PHTm); // PH'
+  // https://youtu.be/VFXf1lIZ3p8?t=229 3:49 Update part, denominator of line 1 Kalman Gain (Matlab_Kalmanfilter.png)
   float HPHR = powf(Ruwb, 2); // HPH' + R
   for (int i = 0; i < STATE_DIM_rl; i++) {
+    //PHTd is the raw data array form of matrix instance PHTm
     HPHR += H.pData[i]*PHTd[i];
   }
   for (int i = 0; i < STATE_DIM_rl; i++) {
+    // https://youtu.be/VFXf1lIZ3p8?t=229 3:49 Update part, line 1 Kalman Gain (Matlab_Kalmanfilter.png)
     K[i] = PHTd[i] / HPHR; // kalman gain = (PH'(HPH' + R )^-1)
     rlState[n].S[i] = rlState[n].S[i] + K[i] * (distMeas - distPred); // state update
   }
+  // Kalman Gain * H(C) Matrix = 
   mat_mult(&Km, &H, &tmpNN1m); // KH
   for (int i = 0; i < STATE_DIM_rl; i++) {
     tmpNN1d[STATE_DIM_rl*i+i] -= 1;
