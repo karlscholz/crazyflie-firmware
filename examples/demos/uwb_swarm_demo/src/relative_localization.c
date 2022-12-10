@@ -121,7 +121,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
 
 bool relative_localization(float* rlStateForControl) {
   if (!is_init) {
-    for (int n = 0; n < NUM_UWB; n++) {
+      int n = 0;
       for (int i = 0; i < STATE_DIM_rl; i++) {
         for (int j = 0; j < STATE_DIM_rl; j++) {
           rlState[n].P[i][j] = 0;
@@ -135,14 +135,14 @@ bool relative_localization(float* rlStateForControl) {
       rlState[n].S[STATE_rlYaw] = 0;
       rlState[n].firstTime = true;
       is_init = true;
-    }
+    
   }
 
   // vel and yaw rate of j-th neighbor; i mean my; h is height
   float vxj, vyj, rj, hi, vxi, vyi, ri, hj;
   uint16_t dij;
 
-  for (int n = 0; n < NUM_UWB; n++) {
+    int n = 0;
     if (getSwarmTwrInfo(n, &dij, &vxj, &vyj, &rj, &hj, &vxi, &vyi, &ri, &hi)) {
       comCount = 0;
       if(!rlState[n].firstTime) {
@@ -158,7 +158,7 @@ bool relative_localization(float* rlStateForControl) {
         comConnection = true;
       }
     }
-  }
+  
   comCount++;
   // disable flight if com is lost for 1 second
   if (comCount > 100) {

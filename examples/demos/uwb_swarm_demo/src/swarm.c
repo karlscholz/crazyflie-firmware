@@ -29,6 +29,8 @@ static float height = 0.4f;
 static float xydistance = 1.0f;
 static bool keepFlying = false;
 
+const float maxVel = 0.1f; // 1.5f; in m/s
+
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
   setpoint->position.z = z;
@@ -83,8 +85,8 @@ static void moveWithLeaderAsOrigin(float posX, float posY) {
   IntErrY += errY * dt;
   pid_vx += rlPIDi * constrain(IntErrX, -0.5, 0.5);
   pid_vy += rlPIDi * constrain(IntErrY, -0.5, 0.5);
-  pid_vx = constrain(pid_vx, -1.5f, 1.5f);
-  pid_vy = constrain(pid_vy, -1.5f, 1.5f);
+  pid_vx = constrain(pid_vx, -maxVel, maxVel);
+  pid_vy = constrain(pid_vy, -maxVel, maxVel);
   setHoverSetpoint(&setpoint, pid_vx, pid_vy, height, 0);
 }
 
