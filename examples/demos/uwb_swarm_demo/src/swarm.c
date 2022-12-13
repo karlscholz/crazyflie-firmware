@@ -27,6 +27,7 @@ static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
 static float height = 0.4f;
 static bool keepFlying = false;
+static float maxVel = .2f;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
@@ -82,8 +83,8 @@ static void moveWithLeaderAsOrigin(float posX, float posY) {
   IntErrY += errY * dt;
   pid_vx += rlPIDi * constrain(IntErrX, -0.5, 0.5);
   pid_vy += rlPIDi * constrain(IntErrY, -0.5, 0.5);
-  pid_vx = constrain(pid_vx, -1.5f, 1.5f);
-  pid_vy = constrain(pid_vy, -1.5f, 1.5f);
+  pid_vx = constrain(pid_vx, -maxVel, maxVel);
+  pid_vy = constrain(pid_vy, -maxVel, maxVel);
   setHoverSetpoint(&setpoint, pid_vx, pid_vy, height, 0);
 }
 
@@ -169,3 +170,9 @@ PARAM_ADD(PARAM_FLOAT, PID_P, &rlPIDp)
 PARAM_ADD(PARAM_FLOAT, PID_I, &rlPIDi)
 PARAM_ADD(PARAM_FLOAT, PID_D, &rlPIDd)
 PARAM_GROUP_STOP(rl_ctrl)
+
+LOG_GROUP_START(my_RL_POS)
+LOG_ADD(LOG_FLOAT, myRLX, &rlVarForCtrl[0][STATE_rlX])
+LOG_ADD(LOG_FLOAT, myRLY, &rlVarForCtrl[0][STATE_rlY])
+LOG_ADD(LOG_FLOAT, myRLYaw, &rlVarForCtrl[0][STATE_rlYaw]) 
+LOG_GROUP_STOP(rl_state)
