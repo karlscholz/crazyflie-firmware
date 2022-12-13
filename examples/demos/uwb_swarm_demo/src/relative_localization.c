@@ -177,14 +177,14 @@ bool relative_localization(float* rlStateForControl) {
   }
 }
 
-LOG_GROUP_START(rl_state)
-LOG_ADD(LOG_FLOAT, rlX0, &rlState[0].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY0, &rlState[0].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw0, &rlState[0].S[STATE_rlYaw])
-LOG_ADD(LOG_FLOAT, rlX1, &rlState[1].S[STATE_rlX])
-LOG_ADD(LOG_FLOAT, rlY1, &rlState[1].S[STATE_rlY])
-LOG_ADD(LOG_FLOAT, rlYaw1, &rlState[1].S[STATE_rlYaw])
-LOG_GROUP_STOP(rl_state)
+// LOG_GROUP_START(rl_state)
+// LOG_ADD(LOG_FLOAT, rlX0, &rlState[0].S[STATE_rlX])
+// LOG_ADD(LOG_FLOAT, rlY0, &rlState[0].S[STATE_rlY])
+// LOG_ADD(LOG_FLOAT, rlYaw0, &rlState[0].S[STATE_rlYaw])
+// LOG_ADD(LOG_FLOAT, rlX1, &rlState[1].S[STATE_rlX])
+// LOG_ADD(LOG_FLOAT, rlY1, &rlState[1].S[STATE_rlY])
+// LOG_ADD(LOG_FLOAT, rlYaw1, &rlState[1].S[STATE_rlYaw])
+// LOG_GROUP_STOP(rl_state)
 
 PARAM_GROUP_START(rl_param)
 PARAM_ADD(PARAM_FLOAT, noiFlow, &Qv) // make sure the name is not too long
