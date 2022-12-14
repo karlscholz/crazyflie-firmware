@@ -29,7 +29,7 @@ static float height = 0.4f;
 static float xydistance = 1.0f;
 static bool keepFlying = false;
 
-const float maxVel = 0.1f; // 1.5f; in m/s
+const float maxVel = 0.5f; // 1.5f; in m/s
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
