@@ -3,7 +3,7 @@
 
 #include "locodeck.h"
 
-#define NUM_UWB 4
+#define NUM_UWB 2
 #define MANUAL_CONTROL_LEADER
 
 typedef struct {
