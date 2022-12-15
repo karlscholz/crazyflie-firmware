@@ -121,7 +121,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
 
 bool relative_localization(float* rlStateForControl) {
   if (!is_init) {
-      int n = 0;
+    for (int n = 0; n < NUM_UWB; n++) {
       for (int i = 0; i < STATE_DIM_rl; i++) {
         for (int j = 0; j < STATE_DIM_rl; j++) {
           rlState[n].P[i][j] = 0;
@@ -135,7 +135,7 @@ bool relative_localization(float* rlStateForControl) {
       rlState[n].S[STATE_rlYaw] = 0;
       rlState[n].firstTime = true;
       is_init = true;
-    
+    }
   }
 
   // vel and yaw rate of j-th neighbor; i mean my; h is height
