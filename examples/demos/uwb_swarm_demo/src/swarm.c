@@ -141,7 +141,7 @@ void appMain() {
 
       // after 30s, atomic pattern flight
       if (timeInAir >= 30000) {
-          float radius = (float)myId * 0.5f;
+          float radius = (float)myId * 1.0f;
           float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
           float rlPosXofMeIn0 = radius * cosf(timeInSecond);
           float rlPosYofMeIn0 = radius * sinf(timeInSecond);
