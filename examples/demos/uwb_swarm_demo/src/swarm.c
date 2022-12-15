@@ -27,7 +27,7 @@ static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
 static float height = 0.4f;
 static bool keepFlying = false;
-static float maxVel = .2f;
+static float maxVel = .5f;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
@@ -129,16 +129,16 @@ void appMain() {
       uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
       
       // 0-20s random flight
-      if (timeInAir < 20000) {
+      if (timeInAir < 30000) {
         flyRandomIn1meter(1.0f);
         desireX = rlVarForCtrl[0][STATE_rlX];
         desireY = rlVarForCtrl[0][STATE_rlY];
       }
 
-      // 20-30s formation flight
-      if ((timeInAir >= 20000) && (timeInAir < 30000)) {
-        moveWithLeaderAsOrigin(desireX, desireY);
-      }
+      // // 20-30s formation flight
+      // if ((timeInAir >= 20000) && (timeInAir < 30000)) {
+      //   moveWithLeaderAsOrigin(desireX, desireY);
+      // }
 
       // after 30s, atomic pattern flight
       if (timeInAir >= 30000) {
