@@ -7,6 +7,7 @@ bin/*
 .pydevproject
 .settings/*
 .vscode/*
+!.vscode/launch.json
 *~
 cflie.*
 version.c
