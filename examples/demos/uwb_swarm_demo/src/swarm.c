@@ -163,6 +163,12 @@ void appMain() {
   }
 }
 
+LOG_GROUP_START(my_RL_POS)
+LOG_ADD(LOG_FLOAT, myRLX, &rlVarForCtrl[0][STATE_rlX])
+LOG_ADD(LOG_FLOAT, myRLY, &rlVarForCtrl[0][STATE_rlY])
+LOG_ADD(LOG_FLOAT, myRLYaw, &rlVarForCtrl[0][STATE_rlYaw]) 
+LOG_GROUP_STOP(rl_state)
+
 PARAM_GROUP_START(rl_ctrl)
 PARAM_ADD(PARAM_UINT8, keepFlying, &keepFlying)
 PARAM_ADD(PARAM_FLOAT, PID_P, &rlPIDp)
