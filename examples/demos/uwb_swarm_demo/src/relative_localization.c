@@ -67,7 +67,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   float xij = rlState[n].S[STATE_rlX];
   float yij = rlState[n].S[STATE_rlY];
 
-  // prediction
+  // prediction how my position changes in respect to the other drone with mine and his velocities, yaw compensated with my yawRate??? why not his yawRate? small angle approximation?
   // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction line 1 (A*x+B*u) (Matlab_Kalmanfilter.png)
   rlState[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
   rlState[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
