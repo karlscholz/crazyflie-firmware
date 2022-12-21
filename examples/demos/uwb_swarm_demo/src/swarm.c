@@ -27,7 +27,7 @@ static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
 static float height = 0.4f;
 static bool keepFlying = false;
-static float maxVel = .5f;
+static float maxVel = 1.0f;
 
 static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate) {
   setpoint->mode.z = modeAbs;
