@@ -129,7 +129,7 @@ void appMain() {
       uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
       
       // 0-20s random flight
-      if (timeInAir < 30000) {
+      if (timeInAir < 20000) {
         flyRandomIn1meter(1.0f);
         desireX = rlVarForCtrl[0][STATE_rlX];
         desireY = rlVarForCtrl[0][STATE_rlY];
@@ -141,8 +141,8 @@ void appMain() {
       // }
 
       // after 30s, atomic pattern flight
-      if (timeInAir >= 30000) {
-          float radius = (float)myId * 0.5f;
+      if (timeInAir >= 20000) {
+          float radius = (float)myId * 1.0f;
           float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
           float rlPosXofMeIn0 = radius * cosf(timeInSecond);
           float rlPosYofMeIn0 = radius * sinf(timeInSecond);
