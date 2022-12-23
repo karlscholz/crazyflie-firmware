@@ -151,7 +151,9 @@ bool relative_localization(float* rlStateForControl) {
         rlState[n].lastTimetick = osTick;
         // DEBUG_PRINT("vxi: %f, vyi: %f, ri: %f, hi: %f\n", (double)vxi, (double)vyi, (double)ri, (double)hi);
         // DEBUG_PRINT("vxj: %f, vyj: %f, rj: %f, hj: %f\n", (double)vxj, (double)vyj, (double)rj, (double)hj);
-        relativeEKF(n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+        if(n==0){
+          relativeEKF(n, vxi, vyi, ri, hi, vxj, vyj, rj, hj, dij, dtEKF);
+        }
       } else {
         rlState[n].lastTimetick = xTaskGetTickCount();
         rlState[n].firstTime = false; // to skip the first infinite update time
