@@ -35,6 +35,7 @@ typedef struct {
  * Parameters: 
  * - int agentId
  * - pointers for uwb Distance and attitude variables
+ *   first 4 are for other agent, last 4 are for myself
  * Returns:
  * - bool state.update[agentId]
  *                                                                            */

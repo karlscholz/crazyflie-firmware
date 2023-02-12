@@ -24,7 +24,7 @@
 
 // creates swarm.c wide variable of stabilizer_type.c struct setpoint
 static setpoint_t setpoint;
-// 2D-float array with all UWB Nodes in one and X, Y, YAW in the other direction
+// 2D-float array with all UWB Nodes in one and X, Y, YAW positions in my reference frame in the other direction
 static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 // Id of this dorne, based on the 40 bit radio adress, but only the last hex character(the last 4 bits) are used.
 static uint8_t myId;
@@ -105,12 +105,13 @@ static float PreErrX = 0, PreErrY = 0, IntErrX = 0, IntErrY = 0;
 // creates static variable to store the timestamp of the last loop to calculate the derivative
 static uint32_t rlPIDlastTime;
 
-/* Uses a simple PID control on X and Y to move to specified location relative
- * to leader.
+/* Compares the the desired position of the leader in my reference frame 
+ * with its actual Position, also in my reference frame and derive 
+ * movements for myself to minimize that difference using a simple PID loop.
  *
  * Parameters:
- * - desired x position relative to leader as float
- * - desired y position relative to leader as float
+ * - desired x position of the leader in my reference frame as a float
+ * - desired y position of the leader in my reference frame as a float
  * Returns:
  * - Nothing
  *                                                                            */
@@ -122,7 +123,7 @@ static void moveWithLeaderAsOrigin(float posX, float posY) {
   // sanity check to just drop the calculation for one loop if counter overflow occured
   if (dt > 1)
     return;
-  // calculate setpoint error of the position
+  // calculate setpoint error of the leader's position, negate it to get the inverse since I am the one moving
   float errX = -(posX - rlVarForCtrl[0][STATE_rlX]);
   float errY = -(posY - rlVarForCtrl[0][STATE_rlY]);
   // calculate the proportional part for the velocity
@@ -180,11 +181,11 @@ void appMain() {
 // if MANUAL_CONTROL_LEADER flag is set, and the last hex character is 0, the leader is actively controlled via cfclient software
 #ifdef MANUAL_CONTROL_LEADER
     if (myId == 0) {
-      // retrieve flight state from kalam filter
+      // retrieve flight state from flight kalman filter
       keepFlying = logGetUint(logIdStateIsFlying);
       // update keepFlying and make it known to the swarm
       keepFlying = updateFlyStatus(myId, keepFlying);
-      //run the relative localization algorithm, to get the relative position of the swarm accessable in swarm.c via rlVarForCtrl
+      //run the relative localization algorithm, to get the relative position of the all other drones in my reference frame accessable in swarm.c via rlVarForCtrl
       relative_localization((float *)rlVarForCtrl);
       //skip the rest of the loop and goes back up to while(1){
       continue;
@@ -194,7 +195,7 @@ void appMain() {
     // retrieve flight state from kalam filter
     keepFlying = updateFlyStatus(myId, keepFlying);
 
-    // if keepFlying is true(the Leader is flying), the swarm is flying and comConnection isn't lost
+    // if keepFlying is true(the Leader is flying), the swarm is flying and uwb radio communication isn't lost
     if(relative_localization((float *)rlVarForCtrl) && keepFlying) {
       // take off
       if (onGround) {
@@ -224,7 +225,7 @@ void appMain() {
       }
 
       // 20-30s formation flight
-      // the current position was determined in the previous step and will now be held relative to the leader
+      // the current position was determined in the previous step and will now move with leader = same position in leader's reference frame
       if ((timeInAir >= 20000) && (timeInAir < 30000)) {
         moveWithLeaderAsOrigin(desireX, desireY);
       }
@@ -236,13 +237,13 @@ void appMain() {
           float radius = (float)myId * 0.5f;
           // calculate time in seconds to determine the next position
           float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
-          // set the x and y position accordingly
+          // calculate the x and y position of the circle path at timeInSecond around the origin
           float rlPosXofMeIn0 = radius * cosf(timeInSecond);
           float rlPosYofMeIn0 = radius * sinf(timeInSecond);
-          // subtract the yaw angle of the leader, so it doesn't interfere with the circling of the followers
+          // coordinate transformation from my desired position in leader's reference frame to leader's desired position in my own reference frame (rlVarForCtrl)
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
-          // pass the desired position to the velocity PID controller
+          // pass the desired position of the leader in my reference frame to the velocity PID controller
           moveWithLeaderAsOrigin(desireX, desireY);
       }
 

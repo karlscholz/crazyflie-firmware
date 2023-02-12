@@ -57,17 +57,30 @@ static arm_matrix_instance_f32 HTm = {STATE_DIM_rl, 1, HTd};
 static float PHTd[STATE_DIM_rl * 1];
 static arm_matrix_instance_f32 PHTm = {STATE_DIM_rl, 1, PHTd};
 
+/* Runs the relative localization algorithm for one agent n at a time.
+ * EKF that predicts the relative position of agent n and uses the UWB
+ * distance measurements to correct the prediction.
+ * 
+ * Parameters: 
+ * - int agentId of other agent
+ * - float *vxi, *vyi, *ri, *hi - my flow velocity, yaw rate and height
+ * - float *vxj, *vyj, *rj, *hj - agent n's flow velocity, yaw rate and height
+ * - uint16_t *dij - distance between me and agent n
+ * - float *dt - time since last call
+ * Returns:
+ * - nothing
+ *                                                                            */
 void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, float vyj, float rj, float hj, uint16_t dij, float dt) {
   // create a 3x3 matrix for the error covariance array P
   arm_matrix_instance_f32 Pm = {STATE_DIM_rl, STATE_DIM_rl, (float *)rlState[n].P};
   // calculate the cosine and sine of yaw
   float cyaw = arm_cos_f32(rlState[n].S[STATE_rlYaw]);
   float syaw = arm_sin_f32(rlState[n].S[STATE_rlYaw]);
-  // retrieve the current X and Y positions from the neighbor's POV
+  // retrieve the last estimated X and Y positions of agent n in my reference frame
   float xij = rlState[n].S[STATE_rlX];
   float yij = rlState[n].S[STATE_rlY];
 
-  // prediction how my position changes in respect to the other drone with mine and his velocities, yaw compensated with my yawRate??? why not his yawRate? small angle approximation?
+  // prediction how agent n's position changes with both mine and its flow velocities, yaw compensated with my yawRate
   // https://youtu.be/VFXf1lIZ3p8?t=223 3:38 Prediction line 1 (A*x+B*u) (Matlab_Kalmanfilter.png)
   rlState[n].S[STATE_rlX] = xij + (cyaw * vxj - syaw * vyj - vxi + ri * yij) * dt;
   rlState[n].S[STATE_rlY] = yij + (syaw * vxj + cyaw * vyj - vyi - ri * xij) * dt;
@@ -89,7 +102,7 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   mat_trans(&Am, &tmpNN2m); // A'
   mat_mult(&tmpNN1m, &tmpNN2m, &Pm); // A P A'
 
-  // Initiate the P matrix (covergence matrix) with the initial values and add the initial deviation
+  // Initiate the P matrix (error covergence matrix) with the initial values and add the initial deviation
   // BQB' = [ Qv*c^2 + Qv*s^2 + Qr*y^2 + Qv,                       -Qr*x*y, -Qr*y]
   //        [                       -Qr*x*y, Qv*c^2 + Qv*s^2 + Qr*x^2 + Qv,  Qr*x]
   //        [                         -Qr*y,                          Qr*x,  2*Qr]*dt^2
@@ -104,10 +117,10 @@ void relativeEKF(int n, float vxi, float vyi, float ri, float hi, float vxj, flo
   rlState[n].P[2][1] += dt2 * (Qr * xij);
   rlState[n].P[2][2] += dt2 * (2 * Qr);
 
-  //get the last X and Y estimate from the neighbor's POV
+  //get the current X and Y prediction of agent n's position in my reference frame
   xij = rlState[n].S[STATE_rlX];
   yij = rlState[n].S[STATE_rlY];
-  // predict the distance between the two nodes based on the estimates
+  // calculate the predicted distance between the two agents from the predicted positions using the Pythagorean theorem
   float distPred = sqrtf(xij * xij + yij * yij + (hi - hj) * (hi - hj)) + 0.0001f;
   // convert the measured distance to meters
   float distMeas = (float)(dij / 1000.0f);

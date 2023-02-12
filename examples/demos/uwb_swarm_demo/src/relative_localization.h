@@ -14,9 +14,9 @@ typedef enum {
 
 // the datatype for array rlState with size NUM_UWB
 typedef struct {
-  // array for X Y and YAW
+  // array for X Y and YAW of other agents in my reference frame
   float S[STATE_DIM_rl];
-  // error covariance matrix --> 2d array for X Y and YAW
+  // error covariance matrix --> 3x3 array for X Y and YAW
   float P[STATE_DIM_rl][STATE_DIM_rl];
   // timestamp of last EKF loop to calculate time difference 
   uint32_t lastTimetick;
