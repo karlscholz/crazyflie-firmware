@@ -41,18 +41,18 @@ static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, 
   commanderSetSetpoint(setpoint, 3);
 }
 
-static void flyRandomIn1meter(float vel) {
+static void flyRandomIn1meter(float vel, int distcm) {
   // velocity direction [0 - 2pi] rad
   float randomYaw = (rand() / (float) RAND_MAX) * 6.28f;
   // velocity magnitude [0 - 1] m
   float randomVel = vel*(rand() / (float)RAND_MAX);
   float vxBody = randomVel * cosf(randomYaw);
   float vyBody = randomVel * sinf(randomYaw);
-  for (int i = 1; i < 100; i++) {
+  for (int i = 1; i < distcm; i++) {
     setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
     vTaskDelay(M2T(10));
   }
-  for (int i = 1; i < 100; i++) {
+  for (int i = 1; i < distcm; i++) {
     setHoverSetpoint(&setpoint, -vxBody, -vyBody, height, 0);
     vTaskDelay(M2T(10));
   }
@@ -129,7 +129,7 @@ void appMain() {
       
       // 0-20s random flight
       if (timeInAir < 20000) {
-        flyRandomIn1meter(1.0f);
+        flyRandomIn1meter(1.0f, 50);
         desireX = rlVarForCtrl[0][STATE_rlX];
         desireY = rlVarForCtrl[0][STATE_rlY];
       }
@@ -143,7 +143,7 @@ void appMain() {
       if (timeInAir >= 30000) {
         float rlPosXofMeIn0;
         float rlPosYofMeIn0;
-        float xydistance = 1.0f;
+        float xydistance = 0.5f;
         switch(myId){
           case 1: // left
             rlPosXofMeIn0 = -xydistance;
