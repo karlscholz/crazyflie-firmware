@@ -22,6 +22,11 @@
 #include "relative_localization.h"
 #include "swarmTwrTag.h"
 
+#define ONBOARD_INSTRUCTIONS
+
+#define MAX(a,b) ((a>b)?a:b)
+#define MIN(a,b) ((a<b)?a:b)
+
 static setpoint_t setpoint;
 static float rlVarForCtrl[NUM_UWB][STATE_DIM_rl];
 static uint8_t myId;
@@ -91,6 +96,21 @@ void appMain() {
   vTaskDelay(M2T(3000));
   DEBUG_PRINT("Waiting for activation ...\n");
 
+  logVarId_t idUp = logGetVarId("range", "up");
+  logVarId_t idLeft = logGetVarId("range", "left");
+  logVarId_t idRight = logGetVarId("range", "right");
+  logVarId_t idFront = logGetVarId("range", "front");
+  logVarId_t idBack = logGetVarId("range", "back");
+  paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
+  uint8_t multirangerInit = paramGetUint(idMultiranger);
+  while(multirangerInit == 0){
+    paramGetUint(idMultiranger);
+    vTaskDelay(M2T(10));
+  }
+  #ifdef ONBOARD_INSTRUCTIONS
+  static bool LeaderInitFlight = true;
+  #endif
+
   static bool onGround = true;
   static uint32_t timeTakeOff;
   static float desireX;
@@ -101,12 +121,61 @@ void appMain() {
 
   while(1) {
     vTaskDelay(M2T(10));
+      uint16_t leftLiDAR = logGetUint(idLeft);
+      uint16_t rightLiDAR = logGetUint(idRight);
+      uint16_t frontLiDAR = logGetUint(idFront);
+      uint16_t backLiDAR = logGetUint(idBack);
 
 #ifdef MANUAL_CONTROL_LEADER
     if (myId == 0) {
       keepFlying = logGetUint(logIdStateIsFlying);
       keepFlying = updateFlyStatus(myId, keepFlying);
       relative_localization((float *)rlVarForCtrl);
+      #ifdef ONBOARD_INSTRUCTIONS
+      if (onGround) {
+        // Takeoff 15 Seconds after Taskbegin
+        vTaskDelay(M2T(10000));
+        estimatorKalmanInit();
+        vTaskDelay(M2T(2000));
+        for (int i = 0; i < 50; i++) {
+          setHoverSetpoint(&setpoint, 0, 0, height, 0);
+          vTaskDelay(M2T(100));
+        }
+        onGround = false;
+        timeTakeOff = xTaskGetTickCount();
+      }
+      uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
+      
+      // 0-30s random flight, fly right and left to get good angles on all followers
+      if (timeInAir < 30000 && LeaderInitFlight) {
+        float vxBody = 0.0f, vyBody = 0.5f;
+        for(int loops = 0; loops < 2; loops++){
+          for (int i = 1; i < 200; i++) {
+            setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
+            vTaskDelay(M2T(10));
+          }
+          for (int i = 1; i < 400; i++) {
+            setHoverSetpoint(&setpoint, -vxBody, -vyBody, height, 0);
+            vTaskDelay(M2T(10));
+          }
+          for (int i = 1; i < 200; i++) {
+            setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
+            vTaskDelay(M2T(10));
+          }
+        }
+        LeaderInitFlight = false;
+      }
+
+      // 20-30s formation flight
+      if (timeInAir >= 30000) {
+        float vxBody = 1.0f, vyBody = 0.0f;
+
+        for (int i = 1; i < 600; i++) {
+          setHoverSetpoint(&setpoint, vxBody, vyBody, height, 0);
+          vTaskDelay(M2T(10));
+        }
+      }
+      #endif
       continue;
     }
 #endif
@@ -126,7 +195,27 @@ void appMain() {
         timeTakeOff = xTaskGetTickCount();
       }
       uint32_t timeInAir = xTaskGetTickCount() - timeTakeOff;
-      
+
+      uint16_t tolerance = 50; //maximum allowed distance to obstacles, if obstacle -> move away, skip this loop
+      if(!onGround && (frontLiDAR < tolerance || backLiDAR < tolerance || leftLiDAR < tolerance || rightLiDAR < tolerance)) {
+        static const float velMax = 1.0f;
+        float factor = velMax/tolerance;
+        
+        uint16_t left_o = tolerance - MIN(leftLiDAR, tolerance);
+        uint16_t right_o = tolerance - MIN(rightLiDAR, tolerance);
+        float l_comp = (-1) * left_o * factor;
+        float r_comp = right_o * factor;
+        float velSide = r_comp + l_comp;
+
+        uint16_t front_o = tolerance - MIN(frontLiDAR, tolerance);
+        uint16_t back_o = tolerance - MIN(backLiDAR, tolerance);
+        float f_comp = (-1) * front_o * factor;
+        float b_comp = back_o * factor;
+        float velFront = b_comp + f_comp;
+        setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
+        continue;
+      }
+
       // 0-20s random flight
       if (timeInAir < 20000) {
         flyRandomIn1meter(1.0f, 50);

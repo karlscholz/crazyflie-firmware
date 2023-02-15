@@ -5,6 +5,11 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c"
+        "bootloader.h": "c",
+        "random": "c",
+        "array": "c",
+        "deque": "c",
+        "vector": "c",
+        "string_view": "c"
     }
 }
