@@ -141,10 +141,28 @@ void appMain() {
 
       // after 30s, atomic pattern flight
       if (timeInAir >= 30000) {
-          float radius = (float)myId * 0.5f;
-          float timeInSecond = (float)timeInAir / configTICK_RATE_HZ;
-          float rlPosXofMeIn0 = radius * cosf(timeInSecond);
-          float rlPosYofMeIn0 = radius * sinf(timeInSecond);
+          float rlPosXofMeIn0;
+          float rlPosYofMeIn0;
+          float xydistance = 1.0f;
+          switch(myId){
+            case 1: // left
+              rlPosXofMeIn0 = -xydistance;
+              rlPosYofMeIn0 = xydistance;
+              break;
+            case 2: // right
+              rlPosXofMeIn0 = -xydistance;
+              rlPosYofMeIn0 = -xydistance;
+              break;
+            case 3: // back
+              rlPosXofMeIn0 = -2*xydistance;
+              rlPosYofMeIn0 = 0;
+              break;
+            default:
+              desireY = rlVarForCtrl[0][STATE_rlX];
+              desireX = rlVarForCtrl[0][STATE_rlY];
+              moveWithLeaderAsOrigin(desireX, desireY);
+              continue;
+          }
           desireX = -cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 + sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           desireY = -sinf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosXofMeIn0 - cosf(rlVarForCtrl[0][STATE_rlYaw]) * rlPosYofMeIn0;
           moveWithLeaderAsOrigin(desireX, desireY);
