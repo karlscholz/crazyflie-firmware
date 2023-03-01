@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm.c - Power Management driver and functions.
+ * pm_stm32f4.c - Power Management driver and functions.
  */
 
 #include "stm32fxxx.h"
@@ -213,7 +213,7 @@ float pmGetBatteryVoltageMax(void)
  * When a module wants to register a callback to be called on shutdown they
  * call pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t),
  * with a function they which to be run at shutdown. We currently support
- * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registred.
+ * GRACEFUL_SHUTDOWN_MAX_CALLBACKS number of callbacks to be registered.
  */
 #define GRACEFUL_SHUTDOWN_MAX_CALLBACKS 5
 static int graceful_shutdown_callbacks_index;
@@ -225,7 +225,7 @@ static graceful_shutdown_callback_t graceful_shutdown_callbacks[GRACEFUL_SHUTDOW
  */
 bool pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb)
 {
-  // To many registered allready! Increase limit if you think you are important
+  // To many registered already! Increase limit if you think you are important
   // enough!
   if (graceful_shutdown_callbacks_index >= GRACEFUL_SHUTDOWN_MAX_CALLBACKS) {
     return false;
@@ -256,6 +256,15 @@ static void pmGracefulShutdown()
   syslinkSendPacket(&slp);
 }
 
+static void pmEnableBatteryStatusAutoupdate()
+{
+  SyslinkPacket slp = {
+    .type = SYSLINK_PM_BATTERY_AUTOUPDATE,
+  };
+
+  syslinkSendPacket(&slp);
+}
+
 void pmSyslinkUpdate(SyslinkPacket *slp)
 {
   if (slp->type == SYSLINK_PM_BATTERY_STATE) {
@@ -280,7 +289,7 @@ void pmSyslinkUpdate(SyslinkPacket *slp)
 
 void pmSetChargeState(PMChargeStates chgState)
 {
-  // TODO: Send syslink packafe with charge state
+  // TODO: Send syslink package with charge state
 }
 
 PMStates pmUpdateState()
@@ -398,6 +407,10 @@ void pmTask(void *param)
 
   pmSetChargeState(charge500mA);
   systemWaitStart();
+
+  // Continuous battery voltage and status messages must be enabled
+  // after system startup to avoid syslink queue overflow.
+  pmEnableBatteryStatusAutoupdate();
 
   while(1)
   {
