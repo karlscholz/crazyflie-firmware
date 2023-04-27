@@ -22,7 +22,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-# & C:/Users/ScholzKarl/AppData/Local/Programs/Python/Python310/python.exe c:/Users/ScholzKarl/Desktop/crazyflie-firmware/examples/demos/swarm_demo/control_tower/control_towerKS.py 9 s
+# & C:/Users/ScholzKarl/AppData/Local/Programs/Python/Python310/python.exe c:/Users/ScholzKarl/crazyflie-firmware/examples/demos/swarm_demo/control_tower/control_towerKS.py 9 s
 
 #cd .\Desktop\crazyflie-firmware\examples\demos\swarm_demo\control_tower\
 
