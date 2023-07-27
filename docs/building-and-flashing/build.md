@@ -132,6 +132,8 @@ Please go to [these instructions](/docs/development/kbuild.md) to learn how to u
 
 There are certain functions, like the high level commander and controllers, that have been wrapped to python bindings. These can be used to easily test these functions on a computer or use it in a simulation.
 
+First make sure that you have [SWIG](https://swig.org/) installed on your system. Then execute the following commands in the terminal
+
 ```bash
 make cf2_defconfig
 make bindings_python
@@ -203,7 +205,9 @@ Warning: if multiple Crazyflies within range are in bootloader mode the result i
 
 #### Automatically enter bootloader mode
 * Make sure the Crazyflie is on
-* In your terminal, run `CLOAD_CMDS="-w radio://0/80/2M" make cload`
+* In your terminal, run `CLOAD_CMDS="-w [CRAZYFLIE_URI]" make cload`
+* or run `cfloader flash cf2.bin stm32-fw -w [CRAZYFLIE_URI]`
+with [CRAZYFLIE_URI] being the uri of the crazyflie.
 
 It will connect to the Crazyflie with the specified address, put it in bootloader mode and flash the binary. This method is suitable for classroom situations.
 
